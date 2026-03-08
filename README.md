@@ -14,69 +14,91 @@ Built with **Next.js**, **MapLibre GL**, **FastAPI**, and **Python**, it's desig
 
 ---
 
+## 🔥 The Fantasy
+
+* Track private jets of billionaires
+* Monitor satellites passing overhead
+* Watch naval traffic worldwide
+* Detect GPS jamming zones
+* Follow earthquakes and disasters in real time
+
+---
+
+## ⚡ Quick Start (Docker)
+
+```bash
+git clone https://github.com/BigBodyCobain/Shadowbroker.git
+cd Shadowbroker
+docker-compose up -d
+```
+
+Open `http://localhost:3000` to view the dashboard! *(Requires Docker)*
+
+---
+
 ## ✨ Features
 
 ### 🛩️ Aviation Tracking
 
-- **Commercial Flights** — Real-time positions via OpenSky Network (~5,000+ aircraft)
-- **Private Aircraft** — Light GA, turboprops, bizjets tracked separately
-- **Private Jets** — High-net-worth individual aircraft with owner identification
-- **Military Flights** — Tankers, ISR, fighters, transports via adsb.lol military endpoint
-- **Flight Trail Accumulation** — Persistent breadcrumb trails for all tracked aircraft
-- **Holding Pattern Detection** — Automatically flags aircraft circling (>300° total turn)
-- **Aircraft Classification** — Shape-accurate SVG icons: airliners, turboprops, bizjets, helicopters
-- **Grounded Detection** — Aircraft below 100ft AGL rendered with grey icons
+* **Commercial Flights** — Real-time positions via OpenSky Network (~5,000+ aircraft)
+* **Private Aircraft** — Light GA, turboprops, bizjets tracked separately
+* **Private Jets** — High-net-worth individual aircraft with owner identification
+* **Military Flights** — Tankers, ISR, fighters, transports via adsb.lol military endpoint
+* **Flight Trail Accumulation** — Persistent breadcrumb trails for all tracked aircraft
+* **Holding Pattern Detection** — Automatically flags aircraft circling (>300° total turn)
+* **Aircraft Classification** — Shape-accurate SVG icons: airliners, turboprops, bizjets, helicopters
+* **Grounded Detection** — Aircraft below 100ft AGL rendered with grey icons
 
 ### 🚢 Maritime Tracking
 
-- **AIS Vessel Stream** — 25,000+ vessels via aisstream.io WebSocket (real-time)
-- **Ship Classification** — Cargo, tanker, passenger, yacht, military vessel types with color-coded icons
-- **Carrier Strike Group Tracker** — All 11 active US Navy aircraft carriers with OSINT-estimated positions
-  - Automated GDELT news scraping for carrier movement intelligence
-  - 50+ geographic region-to-coordinate mappings
-  - Disk-cached positions, auto-updates at 00:00 & 12:00 UTC
-- **Cruise & Passenger Ships** — Dedicated layer for cruise liners and ferries
-- **Clustered Display** — Ships cluster at low zoom with count labels, decluster on zoom-in
+* **AIS Vessel Stream** — 25,000+ vessels via aisstream.io WebSocket (real-time)
+* **Ship Classification** — Cargo, tanker, passenger, yacht, military vessel types with color-coded icons
+* **Carrier Strike Group Tracker** — All 11 active US Navy aircraft carriers with OSINT-estimated positions
+  * Automated GDELT news scraping for carrier movement intelligence
+  * 50+ geographic region-to-coordinate mappings
+  * Disk-cached positions, auto-updates at 00:00 & 12:00 UTC
+* **Cruise & Passenger Ships** — Dedicated layer for cruise liners and ferries
+* **Clustered Display** — Ships cluster at low zoom with count labels, decluster on zoom-in
 
 ### 🛰️ Space & Satellites
 
-- **Orbital Tracking** — Real-time satellite positions from N2YO API
-- **Mission-Type Classification** — Color-coded by mission: military recon (red), SAR (cyan), SIGINT (white), navigation (blue), early warning (magenta), commercial imaging (green), space station (gold)
+* **Orbital Tracking** — Real-time satellite positions from N2YO API
+* **Mission-Type Classification** — Color-coded by mission: military recon (red), SAR (cyan), SIGINT (white), navigation (blue), early warning (magenta), commercial imaging (green), space station (gold)
 
 ### 🌍 Geopolitics & Conflict
 
-- **Global Incidents** — GDELT-powered conflict event aggregation (last 8 hours, ~1,000 events)
-- **Ukraine Frontline** — Live warfront GeoJSON from DeepState Map
-- **SIGINT/RISINT News Feed** — Real-time RSS aggregation from multiple intelligence-focused sources
-- **Region Dossier** — Right-click anywhere on the map for:
-  - Country profile (population, capital, languages, currencies, area)
-  - Head of state & government type (Wikidata SPARQL)
-  - Local Wikipedia summary with thumbnail
+* **Global Incidents** — GDELT-powered conflict event aggregation (last 8 hours, ~1,000 events)
+* **Ukraine Frontline** — Live warfront GeoJSON from DeepState Map
+* **SIGINT/RISINT News Feed** — Real-time RSS aggregation from multiple intelligence-focused sources
+* **Region Dossier** — Right-click anywhere on the map for:
+  * Country profile (population, capital, languages, currencies, area)
+  * Head of state & government type (Wikidata SPARQL)
+  * Local Wikipedia summary with thumbnail
 
 ### 📷 Surveillance
 
-- **CCTV Mesh** — 2,000+ live traffic cameras from:
-  - 🇬🇧 Transport for London JamCams
-  - 🇺🇸 Austin, TX TxDOT
-  - 🇺🇸 NYC DOT
-  - 🇸🇬 Singapore LTA
-  - Custom URL ingestion
-- **Feed Rendering** — Automatic detection & rendering of video, MJPEG, HLS, embed, satellite tile, and image feeds
-- **Clustered Map Display** — Green dots cluster with count labels, decluster on zoom
+* **CCTV Mesh** — 2,000+ live traffic cameras from:
+  * 🇬🇧 Transport for London JamCams
+  * 🇺🇸 Austin, TX TxDOT
+  * 🇺🇸 NYC DOT
+  * 🇸🇬 Singapore LTA
+  * Custom URL ingestion
+* **Feed Rendering** — Automatic detection & rendering of video, MJPEG, HLS, embed, satellite tile, and image feeds
+* **Clustered Map Display** — Green dots cluster with count labels, decluster on zoom
 
 ### 📡 Signal Intelligence
 
-- **GPS Jamming Detection** — Real-time analysis of aircraft NAC-P (Navigation Accuracy Category) values
-  - Grid-based aggregation identifies interference zones
-  - Red overlay squares with "GPS JAM XX%" severity labels
-- **Radio Intercept Panel** — Scanner-style UI for monitoring communications
+* **GPS Jamming Detection** — Real-time analysis of aircraft NAC-P (Navigation Accuracy Category) values
+  * Grid-based aggregation identifies interference zones
+  * Red overlay squares with "GPS JAM XX%" severity labels
+* **Radio Intercept Panel** — Scanner-style UI for monitoring communications
 
 ### 🌐 Additional Layers
 
-- **Earthquakes (24h)** — USGS real-time earthquake feed with magnitude-scaled markers
-- **Day/Night Cycle** — Solar terminator overlay showing global daylight/darkness
-- **Global Markets Ticker** — Live financial market indices (minimizable)
-- **Measurement Tool** — Point-to-point distance & bearing measurement on the map
+* **Earthquakes (24h)** — USGS real-time earthquake feed with magnitude-scaled markers
+* **Day/Night Cycle** — Solar terminator overlay showing global daylight/darkness
+* **Global Markets Ticker** — Live financial market indices (minimizable)
+* **Measurement Tool** — Point-to-point distance & bearing measurement on the map
 
 ---
 
@@ -202,9 +224,9 @@ If you want to modify the code or run from source:
 
 #### Prerequisites
 
-- **Node.js** 18+ and **npm**
-- **Python** 3.10+ with `pip`
-- API keys for: `aisstream.io`, `n2yo.com` (and optionally `opensky-network.org`, `lta.gov.sg`)
+* **Node.js** 18+ and **npm**
+* **Python** 3.10+ with `pip`
+* API keys for: `aisstream.io`, `n2yo.com` (and optionally `opensky-network.org`, `lta.gov.sg`)
 
 ### Installation
 
@@ -240,8 +262,8 @@ npm run dev
 
 This starts:
 
-- **Next.js** frontend on `http://localhost:3000`
-- **FastAPI** backend on `http://localhost:8000`
+* **Next.js** frontend on `http://localhost:3000`
+* **FastAPI** backend on `http://localhost:8000`
 
 ---
 
@@ -273,14 +295,14 @@ All layers are independently toggleable from the left panel:
 
 The platform is optimized for handling massive real-time datasets:
 
-- **Gzip Compression** — API payloads compressed ~92% (11.6 MB → 915 KB)
-- **ETag Caching** — `304 Not Modified` responses skip redundant JSON parsing
-- **Viewport Culling** — Only features within the visible map bounds (+20% buffer) are rendered
-- **Clustered Rendering** — Ships, CCTV, and earthquakes use MapLibre clustering to reduce feature count
-- **Debounced Viewport Updates** — 300ms debounce prevents GeoJSON rebuild thrash during pan/zoom
-- **Position Interpolation** — Smooth 10s tick animation between data refreshes
-- **React.memo** — Heavy components wrapped to prevent unnecessary re-renders
-- **Coordinate Precision** — Lat/lng rounded to 5 decimals (~1m) to reduce JSON size
+* **Gzip Compression** — API payloads compressed ~92% (11.6 MB → 915 KB)
+* **ETag Caching** — `304 Not Modified` responses skip redundant JSON parsing
+* **Viewport Culling** — Only features within the visible map bounds (+20% buffer) are rendered
+* **Clustered Rendering** — Ships, CCTV, and earthquakes use MapLibre clustering to reduce feature count
+* **Debounced Viewport Updates** — 300ms debounce prevents GeoJSON rebuild thrash during pan/zoom
+* **Position Interpolation** — Smooth 10s tick animation between data refreshes
+* **React.memo** — Heavy components wrapped to prevent unnecessary re-renders
+* **Coordinate Precision** — Lat/lng rounded to 5 decimals (~1m) to reduce JSON size
 
 ---
 
