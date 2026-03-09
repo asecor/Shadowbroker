@@ -3,8 +3,42 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
+import Hls from 'hls.js';
 import WikiImage from '@/components/WikiImage';
+
+// HLS video player — uses hls.js on Chrome/Firefox, native on Safari
+function HlsVideo({ url, className }: { url: string; className?: string }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !url) return;
+
+        let hls: Hls | null = null;
+
+        if (Hls.isSupported()) {
+            hls = new Hls({ enableWorker: false, lowLatencyMode: true });
+            hls.loadSource(url);
+            hls.attachMedia(video);
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Safari native HLS
+            video.src = url;
+        }
+
+        return () => { hls?.destroy(); };
+    }, [url]);
+
+    return (
+        <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className={className}
+        />
+    );
+}
 
 // Format time from pubish string "Tue, 24 Feb 2026 15:30:00 GMT" to "15:30"
 function formatTime(pubDate: string) {
@@ -807,11 +841,8 @@ function NewsFeedInner({ data, selectedEntity, regionDossier, regionDossierLoadi
                             />
                         );
                         if (mt === 'hls') return (
-                            <video
-                                src={url}
-                                autoPlay
-                                muted
-                                playsInline
+                            <HlsVideo
+                                url={url}
                                 className="w-full h-full object-cover border border-cyan-900/50 rounded-sm filter contrast-125 saturate-50"
                             />
                         );
