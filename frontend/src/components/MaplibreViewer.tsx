@@ -53,6 +53,32 @@ const TURBOPROP_PATH = "M12 3C11.3 3 10.8 3.5 10.8 4V9L3 12V13.5L10.8 11.5V18.5L
 // Bizjet: sleek, small swept wings, T-tail
 const BIZJET_PATH = "M12 1.5C11.4 1.5 11 2 11 2.8V9L5 12.5V14L11 12V18.5L8.5 20V21.5L12 20.5L15.5 21.5V20L13 18.5V12L19 14V12.5L13 9V2.8C13 2 12.6 1.5 12 1.5Z";
 
+// --- Fire icon SVGs for FIRMS hotspots (multi-tongue flame, unmistakably fire) ---
+function makeFireSvg(fill: string, innerFill: string, size = 18) {
+    // Multi-forked flame: main body + left tongue + right tongue + inner glow
+    return `data:image/svg+xml;utf8,${encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 28">` +
+        // Main flame body (wide base, pointed top)
+        `<path d="M12 1C12 1 9 5 8 8C7 11 5.5 13 5.5 16.5C5.5 20.5 8 23.5 12 23.5C16 23.5 18.5 20.5 18.5 16.5C18.5 13 17 11 16 8C15 5 12 1 12 1Z" fill="${fill}" stroke="rgba(0,0,0,0.7)" stroke-width="0.7"/>` +
+        // Left tongue (forks out left from top)
+        `<path d="M10 8C10 8 7.5 4.5 7 2.5C7 2.5 6 5.5 7 9C7.5 10.5 8.5 11.5 9.5 12" fill="${fill}" stroke="rgba(0,0,0,0.5)" stroke-width="0.4"/>` +
+        // Right tongue (forks out right from top)
+        `<path d="M14 8C14 8 16.5 4.5 17 2.5C17 2.5 18 5.5 17 9C16.5 10.5 15.5 11.5 14.5 12" fill="${fill}" stroke="rgba(0,0,0,0.5)" stroke-width="0.4"/>` +
+        // Inner bright core
+        `<path d="M12 8C12 8 10.5 11 10.5 14.5C10.5 17.5 11 19.5 12 20C13 19.5 13.5 17.5 13.5 14.5C13.5 11 12 8 12 8Z" fill="${innerFill}" opacity="0.85"/>` +
+        `</svg>`
+    )}`;
+}
+const svgFireYellow = makeFireSvg('#ffcc00', '#fff5aa', 16);
+const svgFireOrange = makeFireSvg('#ff8800', '#ffcc00', 18);
+const svgFireRed = makeFireSvg('#ff2200', '#ff8800', 20);
+const svgFireDarkRed = makeFireSvg('#cc0000', '#ff2200', 22);
+// Larger fire icons for cluster markers (visually distinct from Global Incidents circles)
+const svgFireClusterSmall = makeFireSvg('#ff6600', '#ffcc00', 32);
+const svgFireClusterMed = makeFireSvg('#ff3300', '#ff8800', 40);
+const svgFireClusterLarge = makeFireSvg('#cc0000', '#ff3300', 48);
+const svgFireClusterXL = makeFireSvg('#880000', '#cc0000', 56);
+
 function makeAircraftSvg(type: 'airliner' | 'turboprop' | 'bizjet' | 'generic', fill: string, stroke = 'black', size = 20) {
     const paths: Record<string, string> = { airliner: AIRLINER_PATH, turboprop: TURBOPROP_PATH, bizjet: BIZJET_PATH, generic: "M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" };
     const p = paths[type] || paths.generic;
@@ -411,48 +437,62 @@ const MaplibreViewer = ({ data, activeLayers, onEntityClick, flyToLocation, sele
         };
     }, [activeLayers.kiwisdr, data?.kiwisdr, inView]);
 
-    // Radiation monitors — green/red dots based on CPM level
-    const radiationGeoJSON = useMemo(() => {
-        if (!activeLayers.radiation || !data?.radiation?.length) return null;
+    // FIRMS fires — heat-colored dots by FRP (Fire Radiative Power)
+    const firmsGeoJSON = useMemo(() => {
+        if (!activeLayers.firms || !data?.firms_fires?.length) return null;
         return {
             type: 'FeatureCollection' as const,
-            features: data.radiation.filter((r: any) => r.lat != null && r.lng != null).map((r: any, i: number) => ({
-                type: 'Feature' as const,
-                properties: { id: i, type: 'radiation', cpm: r.cpm || 0, captured_at: r.captured_at || '' },
-                geometry: { type: 'Point' as const, coordinates: [r.lng, r.lat] }
-            }))
+            features: data.firms_fires.map((f: any, i: number) => {
+                const frp = f.frp || 0;
+                const iconId = frp >= 100 ? 'fire-darkred' : frp >= 20 ? 'fire-red' : frp >= 5 ? 'fire-orange' : 'fire-yellow';
+                return {
+                    type: 'Feature' as const,
+                    properties: {
+                        id: i,
+                        type: 'firms_fire',
+                        name: `Fire ${frp.toFixed(1)} MW`,
+                        frp,
+                        iconId,
+                        brightness: f.brightness || 0,
+                        confidence: f.confidence || '',
+                        daynight: f.daynight === 'D' ? 'Day' : 'Night',
+                        acq_date: f.acq_date || '',
+                        acq_time: f.acq_time || '',
+                    },
+                    geometry: { type: 'Point' as const, coordinates: [f.lng, f.lat] }
+                };
+            })
         };
-    }, [activeLayers.radiation, data?.radiation]);
+    }, [activeLayers.firms, data?.firms_fires]);
 
-    // Internet outages — country centroids
-    const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
-        'AF': [67.7, 33.9], 'AL': [20.2, 41.2], 'DZ': [1.7, 28.0], 'AO': [17.9, -11.2], 'AR': [-63.6, -38.4],
-        'AM': [45.0, 40.1], 'AU': [133.8, -25.3], 'AZ': [47.6, 40.1], 'BD': [90.4, 23.7], 'BY': [27.9, 53.7],
-        'BR': [-51.9, -14.2], 'MM': [96.0, 21.9], 'KH': [105.0, 12.6], 'CM': [12.4, 7.4], 'CA': [-106.3, 56.1],
-        'CF': [20.9, 6.6], 'TD': [18.7, 15.5], 'CL': [-71.5, -35.7], 'CN': [104.2, 35.9], 'CO': [-74.3, 4.6],
-        'CD': [21.8, -4.0], 'CU': [-77.8, 21.5], 'EG': [30.8, 26.8], 'ET': [40.5, 9.1], 'FR': [2.2, 46.2],
-        'DE': [10.5, 51.2], 'GH': [-1.0, 7.9], 'GR': [21.8, 39.1], 'HT': [-72.3, 19.1], 'IN': [78.9, 20.6],
-        'ID': [113.9, -0.8], 'IR': [53.7, 32.4], 'IQ': [43.7, 33.2], 'IL': [34.9, 31.0], 'IT': [12.6, 41.9],
-        'JP': [138.3, 36.2], 'JO': [36.2, 30.6], 'KZ': [67.0, 48.0], 'KE': [37.9, -0.0], 'KP': [127.5, 40.3],
-        'KR': [128.0, 35.9], 'KW': [47.5, 29.3], 'LB': [35.9, 33.9], 'LY': [17.2, 26.3], 'MX': [-102.6, 23.6],
-        'MA': [-7.1, 31.8], 'MZ': [35.5, -18.7], 'NG': [8.7, 9.1], 'PK': [69.3, 30.4], 'PS': [35.2, 31.9],
-        'PH': [122.0, 12.9], 'PL': [19.1, 51.9], 'RU': [105.3, 61.5], 'SA': [45.1, 23.9], 'SD': [30.2, 12.9],
-        'SO': [46.2, 5.2], 'ZA': [22.9, -30.6], 'SS': [31.3, 6.9], 'SY': [38.0, 35.0], 'TW': [121.0, 23.7],
-        'TZ': [34.9, -6.4], 'TH': [100.5, 15.9], 'TR': [35.2, 38.9], 'UA': [31.2, 48.4], 'AE': [53.8, 23.4],
-        'GB': [-3.4, 55.4], 'US': [-98.5, 39.8], 'UZ': [64.6, 41.4], 'VE': [-66.6, 6.4], 'VN': [108.3, 14.1],
-        'YE': [48.5, 15.6], 'ZW': [29.2, -19.0],
-    };
+    // Internet outages — region-level with backend-geocoded coordinates
     const internetOutagesGeoJSON = useMemo(() => {
         if (!activeLayers.internet_outages || !data?.internet_outages?.length) return null;
         return {
             type: 'FeatureCollection' as const,
             features: data.internet_outages.map((o: any) => {
-                const coords = COUNTRY_CENTROIDS[o.country_code];
-                if (!coords) return null;
+                const lat = o.lat;
+                const lng = o.lng;
+                if (lat == null || lng == null) return null;
+                const severity = o.severity || 0;
+                const region = o.region_name || o.region_code || '?';
+                const country = o.country_name || o.country_code || '';
+                const label = `${region}, ${country}`;
+                const detail = `${label}\n${severity}% drop · ${o.datasource || 'IODA'}`;
                 return {
                     type: 'Feature' as const,
-                    properties: { country: o.country_name, level: o.level, score: o.score || 0 },
-                    geometry: { type: 'Point' as const, coordinates: coords }
+                    properties: {
+                        id: o.region_code || region,
+                        type: 'internet_outage',
+                        name: label,
+                        country,
+                        region,
+                        level: o.level,
+                        severity,
+                        datasource: o.datasource || '',
+                        detail,
+                    },
+                    geometry: { type: 'Point' as const, coordinates: [lng, lat] }
                 };
             }).filter(Boolean)
         };
@@ -561,6 +601,15 @@ const MaplibreViewer = ({ data, activeLayers, onEntityClick, flyToLocation, sele
         loadImg('icon-threat', svgThreat);
         loadImg('icon-liveua-yellow', svgTriangleYellow);
         loadImg('icon-liveua-red', svgTriangleRed);
+        // FIRMS fire icons
+        loadImg('fire-yellow', svgFireYellow);
+        loadImg('fire-orange', svgFireOrange);
+        loadImg('fire-red', svgFireRed);
+        loadImg('fire-darkred', svgFireDarkRed);
+        loadImg('fire-cluster-sm', svgFireClusterSmall);
+        loadImg('fire-cluster-md', svgFireClusterMed);
+        loadImg('fire-cluster-lg', svgFireClusterLarge);
+        loadImg('fire-cluster-xl', svgFireClusterXL);
 
         // Satellite mission-type icons
         loadImg('sat-mil', makeSatSvg('#ff3333'));
@@ -1193,8 +1242,8 @@ const MaplibreViewer = ({ data, activeLayers, onEntityClick, flyToLocation, sele
         satellitesGeoJSON && 'satellites-layer',
         cctvGeoJSON && 'cctv-layer',
         kiwisdrGeoJSON && 'kiwisdr-layer',
-        radiationGeoJSON && 'radiation-layer',
-        internetOutagesGeoJSON && 'internet-outages-layer'
+        internetOutagesGeoJSON && 'internet-outages-layer',
+        firmsGeoJSON && 'firms-viirs-layer'
     ].filter(Boolean) as string[];
 
 
@@ -1298,22 +1347,47 @@ const MaplibreViewer = ({ data, activeLayers, onEntityClick, flyToLocation, sele
                     </Source>
                 )}
 
-                {/* NASA FIRMS VIIRS — thermal anomalies / wildfires overlay */}
-                {activeLayers.firms && gibsDate && (
-                    <Source
-                        key={`firms-${gibsDate}`}
-                        id="firms-viirs"
-                        type="raster"
-                        tiles={[`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_Thermal_Anomalies_375m_All/default/${gibsDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`]}
-                        tileSize={256}
-                        maxzoom={9}
-                    >
+                {/* NASA FIRMS VIIRS — fire hotspot icons from FIRMS CSV feed */}
+                {firmsGeoJSON && (
+                    <Source id="firms-fires" type="geojson" data={firmsGeoJSON as any} cluster={true} clusterRadius={40} clusterMaxZoom={10}>
+                        {/* Cluster fire icons — flame shape to differentiate from Global Incidents circles */}
+                        <Layer
+                            id="firms-clusters"
+                            type="symbol"
+                            filter={['has', 'point_count']}
+                            layout={{
+                                'icon-image': ['step', ['get', 'point_count'],
+                                    'fire-cluster-sm', 10, 'fire-cluster-md', 50, 'fire-cluster-lg', 200, 'fire-cluster-xl'],
+                                'icon-size': ['step', ['get', 'point_count'], 1.0, 10, 1.1, 50, 1.2, 200, 1.3],
+                                'icon-allow-overlap': true,
+                                'icon-ignore-placement': true,
+                                'text-field': '{point_count_abbreviated}',
+                                'text-font': ['Noto Sans Bold'],
+                                'text-size': ['step', ['get', 'point_count'], 9, 10, 10, 50, 11, 200, 12],
+                                'text-offset': [0, 0.15],
+                                'text-allow-overlap': true,
+                            }}
+                            paint={{
+                                'text-color': '#ffffff',
+                                'text-halo-color': 'rgba(0,0,0,0.8)',
+                                'text-halo-width': 1.2,
+                            }}
+                        />
+                        {/* Individual fire icons — flame shape sized by FRP */}
                         <Layer
                             id="firms-viirs-layer"
-                            type="raster"
-                            paint={{
-                                'raster-opacity': 0.9,
-                                'raster-fade-duration': 300
+                            type="symbol"
+                            filter={['!', ['has', 'point_count']]}
+                            layout={{
+                                'icon-image': ['get', 'iconId'],
+                                'icon-size': ['interpolate', ['linear'], ['zoom'],
+                                    2, 0.4,
+                                    5, 0.6,
+                                    8, 0.8,
+                                    12, 1.0
+                                ],
+                                'icon-allow-overlap': true,
+                                'icon-ignore-placement': true,
                             }}
                         />
                     </Source>
@@ -1976,58 +2050,65 @@ const MaplibreViewer = ({ data, activeLayers, onEntityClick, flyToLocation, sele
                     </Source>
                 )}
 
-                {/* Radiation Monitors — green/red clustered dots */}
-                {radiationGeoJSON && (
-                    <Source id="radiation" type="geojson" data={radiationGeoJSON as any} cluster={true} clusterRadius={50} clusterMaxZoom={12}>
-                        <Layer
-                            id="radiation-clusters"
-                            type="circle"
-                            filter={['has', 'point_count']}
-                            paint={{
-                                'circle-color': 'rgba(0, 255, 100, 0.7)',
-                                'circle-radius': ['step', ['get', 'point_count'], 10, 5, 14, 10, 18],
-                                'circle-stroke-width': 1,
-                                'circle-stroke-color': 'rgba(0, 255, 100, 1.0)'
-                            }}
-                        />
-                        <Layer
-                            id="radiation-cluster-count"
-                            type="symbol"
-                            filter={['has', 'point_count']}
-                            layout={{ 'text-field': '{point_count_abbreviated}', 'text-size': 10, 'text-allow-overlap': true }}
-                            paint={{ 'text-color': '#ffffff', 'text-halo-color': '#000000', 'text-halo-width': 1 }}
-                        />
-                        <Layer
-                            id="radiation-layer"
-                            type="circle"
-                            filter={['!', ['has', 'point_count']]}
-                            paint={{
-                                'circle-radius': 5,
-                                'circle-color': ['case', ['>', ['get', 'cpm'], 100], '#ff2222', '#00ff66'],
-                                'circle-stroke-width': 1,
-                                'circle-stroke-color': ['case', ['>', ['get', 'cpm'], 100], '#ff4444', '#00cc55'],
-                                'circle-opacity': 0.8
-                            }}
-                        />
-                    </Source>
-                )}
-
-                {/* Internet Outages — country-level markers */}
+                {/* Internet Outages — region-level grey markers with % and labels */}
                 {internetOutagesGeoJSON && (
                     <Source id="internet-outages" type="geojson" data={internetOutagesGeoJSON as any}>
+                        {/* Outer ring */}
+                        <Layer
+                            id="internet-outages-pulse"
+                            type="circle"
+                            paint={{
+                                'circle-radius': ['interpolate', ['linear'], ['get', 'severity'], 0, 14, 50, 18, 80, 22],
+                                'circle-color': 'rgba(180, 180, 180, 0.1)',
+                                'circle-stroke-width': 1.5,
+                                'circle-stroke-color': 'rgba(180, 180, 180, 0.35)',
+                            }}
+                        />
+                        {/* Inner solid circle — all grey, size conveys severity */}
                         <Layer
                             id="internet-outages-layer"
                             type="circle"
                             paint={{
-                                'circle-radius': 12,
-                                'circle-color': ['case',
-                                    ['>=', ['get', 'score'], 80], '#ff0040',
-                                    ['>=', ['get', 'score'], 50], '#ff6600',
-                                    '#888888'
-                                ],
+                                'circle-radius': ['interpolate', ['linear'], ['get', 'severity'], 0, 6, 50, 9, 80, 12],
+                                'circle-color': '#888888',
                                 'circle-stroke-width': 2,
-                                'circle-stroke-color': '#ffffff',
-                                'circle-opacity': 0.8
+                                'circle-stroke-color': 'rgba(0, 0, 0, 0.6)',
+                                'circle-opacity': 0.9
+                            }}
+                        />
+                        {/* Severity % inside circle */}
+                        <Layer
+                            id="internet-outages-pct"
+                            type="symbol"
+                            layout={{
+                                'text-field': ['case', ['>', ['get', 'severity'], 0], ['concat', ['to-string', ['get', 'severity']], '%'], '!'],
+                                'text-size': 9,
+                                'text-font': ['Noto Sans Bold'],
+                                'text-allow-overlap': true,
+                                'text-ignore-placement': true,
+                            }}
+                            paint={{
+                                'text-color': '#ffffff',
+                                'text-halo-color': 'rgba(0,0,0,0.8)',
+                                'text-halo-width': 1,
+                            }}
+                        />
+                        {/* Region name label below — grey */}
+                        <Layer
+                            id="internet-outages-label"
+                            type="symbol"
+                            layout={{
+                                'text-field': ['get', 'region'],
+                                'text-size': 10,
+                                'text-font': ['Noto Sans Bold'],
+                                'text-offset': [0, 1.8],
+                                'text-anchor': 'top',
+                                'text-allow-overlap': false,
+                            }}
+                            paint={{
+                                'text-color': '#aaaaaa',
+                                'text-halo-color': 'rgba(0,0,0,0.9)',
+                                'text-halo-width': 1.5,
                             }}
                         />
                     </Source>

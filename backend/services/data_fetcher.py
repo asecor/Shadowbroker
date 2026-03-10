@@ -103,8 +103,8 @@ latest_data = {
     "liveuamap": [],
     "kiwisdr": [],
     "space_weather": None,
-    "radiation": [],
-    "internet_outages": []
+    "internet_outages": [],
+    "firms_fires": []
 }
 
 # Thread lock for safe reads/writes to latest_data
@@ -1272,6 +1272,45 @@ def fetch_kiwisdr():
         logger.error(f"Error fetching KiwiSDR nodes: {e}")
         latest_data["kiwisdr"] = []
 
+def fetch_firms_fires():
+    """Fetch global fire/thermal anomalies from NASA FIRMS (NOAA-20 VIIRS, 24h, no key needed)."""
+    fires = []
+    try:
+        url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Global_24h.csv"
+        response = fetch_with_curl(url, timeout=30)
+        if response.status_code == 200:
+            import csv
+            import io
+            reader = csv.DictReader(io.StringIO(response.text))
+            all_rows = []
+            for row in reader:
+                try:
+                    lat = float(row.get("latitude", 0))
+                    lng = float(row.get("longitude", 0))
+                    frp = float(row.get("frp", 0))  # Fire Radiative Power (MW)
+                    conf = row.get("confidence", "nominal")
+                    daynight = row.get("daynight", "")
+                    bright = float(row.get("bright_ti4", 0))
+                    all_rows.append({
+                        "lat": lat,
+                        "lng": lng,
+                        "frp": frp,
+                        "brightness": bright,
+                        "confidence": conf,
+                        "daynight": daynight,
+                        "acq_date": row.get("acq_date", ""),
+                        "acq_time": row.get("acq_time", ""),
+                    })
+                except (ValueError, TypeError):
+                    continue
+            # Sort by FRP descending, keep top 5000 (most intense fires first)
+            all_rows.sort(key=lambda x: x["frp"], reverse=True)
+            fires = all_rows[:5000]
+        logger.info(f"FIRMS fires: {len(fires)} hotspots (from {response.status_code})")
+    except Exception as e:
+        logger.error(f"Error fetching FIRMS fires: {e}")
+    latest_data["firms_fires"] = fires
+
 def fetch_space_weather():
     """Fetch NOAA SWPC Kp index and recent solar events."""
     try:
@@ -1313,66 +1352,96 @@ def fetch_space_weather():
     except Exception as e:
         logger.error(f"Error fetching space weather: {e}")
 
-def fetch_radiation():
-    """Fetch global radiation measurements from Safecast (CC0, no key)."""
-    measurements = []
+# Cache geocoded region coordinates so we only hit Nominatim once per region
+_region_geocode_cache: dict = {}
+
+def _geocode_region(region_name: str, country_name: str) -> tuple:
+    """Geocode a region using OpenStreetMap Nominatim (cached, respects rate limit)."""
+    cache_key = f"{region_name}|{country_name}"
+    if cache_key in _region_geocode_cache:
+        return _region_geocode_cache[cache_key]
     try:
-        url = "https://api.safecast.org/en-US/measurements.json?distance=10000&latitude=0&longitude=0"
-        response = fetch_with_curl(url, timeout=15)
+        import urllib.parse
+        query = urllib.parse.quote(f"{region_name}, {country_name}")
+        url = f"https://nominatim.openstreetmap.org/search?q={query}&format=json&limit=1"
+        response = fetch_with_curl(url, timeout=8, headers={"User-Agent": "ShadowBroker-OSINT/1.0"})
         if response.status_code == 200:
-            data = response.json()
-            for m in data:
-                lat = m.get("latitude")
-                lng = m.get("longitude")
-                value = m.get("value")
-                if lat is None or lng is None or value is None:
-                    continue
-                measurements.append({
-                    "lat": lat,
-                    "lng": lng,
-                    "cpm": value,
-                    "captured_at": m.get("captured_at", ""),
-                })
-            measurements = measurements[:500]
-        logger.info(f"Radiation: {len(measurements)} sensors")
-    except Exception as e:
-        logger.error(f"Error fetching radiation data: {e}")
-    latest_data["radiation"] = measurements
+            results = response.json()
+            if results:
+                lat = float(results[0]["lat"])
+                lon = float(results[0]["lon"])
+                _region_geocode_cache[cache_key] = (lat, lon)
+                return (lat, lon)
+    except Exception:
+        pass
+    _region_geocode_cache[cache_key] = None
+    return None
 
 def fetch_internet_outages():
-    """Fetch internet outage alerts from IODA (Georgia Tech)."""
+    """Fetch regional internet outage alerts from IODA (Georgia Tech).
+    Region-level only — higher fidelity than country-level. If an entire country
+    is down, all its regions will show up individually.
+
+    Only uses reliable datasources (bgp, ping-slash24) that measure actual
+    connectivity. Excludes merit-nt (network telescope with tiny sample sizes
+    that produces wildly misleading percentages for large regions)."""
+    # Datasources that actually measure real internet connectivity
+    RELIABLE_DATASOURCES = {"bgp", "ping-slash24"}
     outages = []
     try:
         now = int(time.time())
         start = now - 86400
-        url = f"https://api.ioda.inetintel.cc.gatech.edu/v2/outages/alerts?from={start}&until={now}"
+        url = f"https://api.ioda.inetintel.cc.gatech.edu/v2/outages/alerts?from={start}&until={now}&limit=500"
         response = fetch_with_curl(url, timeout=15)
         if response.status_code == 200:
             data = response.json()
             alerts = data.get("data", [])
+            # Collect region-level outages (deduplicate by region code, keep worst)
+            region_outages = {}
             for alert in alerts:
                 entity = alert.get("entity", {})
-                if entity.get("type") != "country":
+                etype = entity.get("type", "")
+                level = alert.get("level", "")
+                if level == "normal" or etype != "region":
                     continue
+                datasource = alert.get("datasource", "")
+                if datasource not in RELIABLE_DATASOURCES:
+                    continue  # Skip merit-nt and other unreliable sources
                 code = entity.get("code", "")
                 name = entity.get("name", "")
-                level = alert.get("level", "")
-                score = alert.get("condition", alert.get("score", 0))
-                if level == "normal":
-                    continue
-                outages.append({
-                    "country_code": code,
-                    "country_name": name,
-                    "level": level,
-                    "score": score if isinstance(score, (int, float)) else 0,
-                })
-            seen = {}
-            for o in outages:
-                cc = o["country_code"]
-                if cc not in seen or o["score"] > seen[cc]["score"]:
-                    seen[cc] = o
-            outages = list(seen.values())[:100]
-        logger.info(f"Internet outages: {len(outages)} countries affected")
+                attrs = entity.get("attrs", {})
+                country_code = attrs.get("country_code", "")
+                country_name = attrs.get("country_name", "")
+                value = alert.get("value", 0)
+                history_value = alert.get("historyValue", 0)
+                severity = 0
+                if history_value and history_value > 0:
+                    severity = round((1 - value / history_value) * 100)
+                severity = max(0, min(severity, 100))
+                if severity < 10:
+                    continue  # Skip minor fluctuations (<10% is normal jitter)
+                if code not in region_outages or severity > region_outages[code]["severity"]:
+                    region_outages[code] = {
+                        "region_code": code,
+                        "region_name": name,
+                        "country_code": country_code,
+                        "country_name": country_name,
+                        "level": level,
+                        "datasource": datasource,
+                        "severity": severity,
+                    }
+            # Geocode regions and build final list
+            geocoded = []
+            for rcode, r in region_outages.items():
+                coords = _geocode_region(r["region_name"], r["country_name"])
+                if coords:
+                    r["lat"] = coords[0]
+                    r["lng"] = coords[1]
+                    geocoded.append(r)
+            # Sort by severity descending, cap at 100
+            geocoded.sort(key=lambda x: x["severity"], reverse=True)
+            outages = geocoded[:100]
+        logger.info(f"Internet outages: {len(outages)} regions affected")
     except Exception as e:
         logger.error(f"Error fetching internet outages: {e}")
     latest_data["internet_outages"] = outages
@@ -1934,8 +2003,8 @@ def update_slow_data():
         fetch_geopolitics,
         fetch_kiwisdr,
         fetch_space_weather,
-        fetch_radiation,
         fetch_internet_outages,
+        fetch_firms_fires,
     ]
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(slow_funcs)) as executor:
         futures = [executor.submit(func) for func in slow_funcs]

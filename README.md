@@ -116,6 +116,12 @@ Do not append a trailing `.` to that command; Compose treats it as a service nam
   * Red overlay squares with "GPS JAM XX%" severity labels
 * **Radio Intercept Panel** — Scanner-style UI for monitoring communications
 
+### 🔥 Environmental & Infrastructure Monitoring
+
+* **NASA FIRMS Fire Hotspots (24h)** — 5,000+ global thermal anomalies from NOAA-20 VIIRS satellite, updated every cycle. Flame-shaped icons color-coded by fire radiative power (FRP): yellow (low), orange, red, dark red (intense). Clustered at low zoom with fire-shaped cluster markers.
+* **Space Weather Badge** — Live NOAA geomagnetic storm indicator in the bottom status bar. Color-coded Kp index: green (quiet), yellow (active), red (storm G1–G5). Data from SWPC planetary K-index 1-minute feed.
+* **Internet Outage Monitoring** — Regional internet connectivity alerts from Georgia Tech IODA. Grey markers at affected regions with severity percentage. Uses only reliable datasources (BGP routing tables, active ping probing) — no telescope or interpolated data.
+
 ### 🌐 Additional Layers
 
 * **Earthquakes (24h)** — USGS real-time earthquake feed with magnitude-scaled markers
@@ -156,6 +162,9 @@ Do not append a trailing `.` to that command; Compose treats it as a service nam
 │  │  ├──────────┼──────────┼──────────┼───────────┤  │  │
 │  │  │ DeepState│   RSS    │  Region  │    GPS    │  │  │
 │  │  │ Frontline│  Intel   │ Dossier  │  Jamming  │  │  │
+│  │  ├──────────┼──────────┼──────────┼───────────┤  │  │
+│  │  │  NASA    │  NOAA    │  IODA    │  KiwiSDR  │  │  │
+│  │  │  FIRMS   │  Space Wx│ Outages  │  Radios   │  │  │
 │  │  └──────────┴──────────┴──────────┴───────────┘  │  │
 │  └──────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────┘
@@ -186,6 +195,9 @@ Do not append a trailing `.` to that command; Compose treats it as a service nam
 | [MS Planetary Computer](https://planetarycomputer.microsoft.com) | Sentinel-2 L2A scenes (right-click) | On-demand | No |
 | [KiwiSDR](https://kiwisdr.com) | Public SDR receiver locations | ~30min | No |
 | [OSM Nominatim](https://nominatim.openstreetmap.org) | Place name geocoding (LOCATE bar) | On-demand | No |
+| [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov) | NOAA-20 VIIRS fire/thermal hotspots | ~120s | No |
+| [NOAA SWPC](https://services.swpc.noaa.gov) | Space weather Kp index & solar events | ~120s | No |
+| [IODA (Georgia Tech)](https://ioda.inetintel.cc.gatech.edu) | Regional internet outage alerts | ~120s | No |
 | [CARTO Basemaps](https://carto.com) | Dark map tiles | Continuous | No |
 
 ---
@@ -320,6 +332,8 @@ All layers are independently toggleable from the left panel:
 | MODIS Terra (Daily) | ❌ OFF | NASA GIBS daily satellite imagery |
 | High-Res Satellite | ❌ OFF | Esri sub-meter satellite imagery |
 | KiwiSDR Receivers | ❌ OFF | Public SDR radio receivers |
+| Fire Hotspots (24h) | ❌ OFF | NASA FIRMS VIIRS thermal anomalies |
+| Internet Outages | ❌ OFF | IODA regional connectivity alerts |
 | Day / Night Cycle | ✅ ON | Solar terminator overlay |
 
 ---

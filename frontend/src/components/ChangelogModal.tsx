@@ -2,54 +2,43 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Satellite, Radio, MapPin, Image, Layers, Bug } from "lucide-react";
+import { X, Flame, Sun, Wifi, Activity, Bug } from "lucide-react";
 
-const CURRENT_VERSION = "0.4";
+const CURRENT_VERSION = "0.5";
 const STORAGE_KEY = `shadowbroker_changelog_v${CURRENT_VERSION}`;
 
 const NEW_FEATURES = [
     {
-        icon: <Satellite size={14} className="text-cyan-400" />,
-        title: "NASA GIBS Satellite Imagery",
-        desc: "Daily MODIS Terra true-color imagery with 30-day time slider, play/pause animation, and opacity control.",
-        color: "cyan",
+        icon: <Flame size={14} className="text-orange-400" />,
+        title: "NASA FIRMS Fire Hotspots (24h)",
+        desc: "5,000+ global thermal anomalies from NOAA-20 VIIRS satellite. Flame-shaped icons color-coded by fire radiative power — yellow (low), orange, red, dark red (intense). Clusters show fire counts.",
+        color: "orange",
     },
     {
-        icon: <Layers size={14} className="text-green-400" />,
-        title: "High-Res Satellite (Esri)",
-        desc: "Sub-meter resolution imagery — zoom into buildings and terrain. Toggle in Data Layers or cycle to SATELLITE style.",
-        color: "green",
+        icon: <Sun size={14} className="text-yellow-400" />,
+        title: "Space Weather Badge",
+        desc: "Live NOAA geomagnetic storm indicator in the bottom status bar. Color-coded Kp index: green (quiet), yellow (active), red (storm G1-G5). Sourced from SWPC planetary K-index.",
+        color: "yellow",
     },
     {
-        icon: <Radio size={14} className="text-amber-400" />,
-        title: "KiwiSDR Radio Receivers",
-        desc: "500+ public SDR receivers plotted worldwide. Click any node to open a live radio tuner directly in the SIGINT panel.",
-        color: "amber",
+        icon: <Wifi size={14} className="text-gray-400" />,
+        title: "Internet Outage Monitoring",
+        desc: "Regional internet connectivity alerts from Georgia Tech IODA. Grey markers show affected regions with severity percentage — powered by BGP and active probing data. No false positives.",
+        color: "gray",
     },
     {
-        icon: <Image size={14} className="text-blue-400" />,
-        title: "Sentinel-2 Intel Card",
-        desc: "Right-click anywhere — a floating intel card shows the latest Sentinel-2 satellite photo with capture date and cloud cover. Click to open full resolution.",
-        color: "blue",
-    },
-    {
-        icon: <MapPin size={14} className="text-purple-400" />,
-        title: "LOCATE Bar",
-        desc: "New search bar above coordinates — enter coordinates (31.8, 34.8) or place names (Tehran, Strait of Hormuz) to fly directly there.",
-        color: "purple",
-    },
-    {
-        icon: <Layers size={14} className="text-cyan-400" />,
-        title: "SATELLITE Style Preset",
-        desc: "STYLE button now cycles: DEFAULT → SATELLITE. SATELLITE auto-enables high-res imagery.",
+        icon: <Activity size={14} className="text-cyan-400" />,
+        title: "Enhanced Layer Differentiation",
+        desc: "Fire hotspots use distinct flame icons (not circles) to prevent confusion with Global Incidents. Internet outages use grey markers. Each layer is now instantly recognizable at a glance.",
         color: "cyan",
     },
 ];
 
 const BUG_FIXES = [
-    "Satellite imagery renders below all data icons — flights, ships, markers always visible on top",
-    "Sentinel-2 click now opens the actual high-res PNG image directly in browser",
-    "Light/dark theme fixed — UI stays dark, only the map basemap switches",
+    "All data sourced from verified OSINT feeds — no fabricated or interpolated data points",
+    "Internet outages filtered to reliable datasources only (BGP, ping) — no misleading telescope data",
+    "Fire clusters use flame-shaped icons instead of circles for clear visual separation",
+    "MapLibre font errors resolved — switched to Noto Sans (universally available)",
 ];
 
 export function useChangelog() {

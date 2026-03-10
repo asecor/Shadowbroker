@@ -147,7 +147,6 @@ export default function Dashboard() {
     highres_satellite: false,
     kiwisdr: false,
     firms: false,
-    radiation: false,
     internet_outages: false,
   });
 
