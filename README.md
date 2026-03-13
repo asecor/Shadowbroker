@@ -60,6 +60,73 @@ Do not append a trailing `.` to that command; Compose treats it as a service nam
 
 ---
 
+##  🛠️ How to Update Shadowbroker
+To update to the latest version, follow the steps for your specific Operating System.
+
+🐧 Linux & 🍎 macOS (Terminal / Zsh / Bash)
+Since these systems are Unix-based, you can use the helper script directly.
+
+Pull the latest code:
+```bash
+git pull origin main
+```
+Run the update script:
+```bash
+./compose.sh down
+./compose.sh up --build -d
+```
+
+🪟 Windows (Command Prompt or PowerShell)
+Windows handles scripts differently. You have two ways to update:
+
+Method A: The Direct Way (Recommended)
+Use the docker compose commands directly. This works in any Windows terminal (CMD, PowerShell, or Windows Terminal).
+
+Pull the latest code:
+```bash
+git pull origin main
+```
+
+Rebuild the containers:
+```bash
+docker compose down
+docker compose up --build -d
+```
+
+Method B: Using the Script (Git Bash)
+If you prefer using the ./compose.sh script on Windows, you must use Git Bash (installed with Git for Windows).
+
+Open your project folder, Right-Click, and select "Open Git Bash here".
+
+Run the Linux commands:
+```bash
+./compose.sh down
+./compose.sh up --build -d
+```
+---
+
+⚠️ Troubleshooting the Build
+If you still see the old version after updating:
+
+Force a clean build: 
+```bash
+docker compose build --no-cache
+```
+
+Check logs for errors: 
+```bash
+docker compose logs -f backend
+```
+
+Prune old images: 
+```bash
+docker image prune -f
+```
+
+Open `http://localhost:3000` to view the dashboard! *(Requires Docker or Podman)*
+
+---
+
 ## ✨ Features
 
 ### 🛩️ Aviation Tracking
